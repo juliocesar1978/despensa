@@ -1,10 +1,5 @@
 version: "3.8"
 
-# Edição PRO — pensada para a OCI Ampere, onde há mais recursos disponíveis.
-# Mesmo código de ./api e ./app da edição Lite — só muda a infraestrutura.
-# Todas as variáveis (${...}) definem-se no Portainer, em
-# Stacks > (o teu stack) > Environment variables. Ver README.md.
-
 services:
   despensa-db:
     image: postgres:16-alpine
@@ -49,9 +44,10 @@ services:
       - despensa-db
       - despensa-redis
     volumes:
-      - ${local}/app/uploads:/app/uploads
+      - ${local}/uploads:/app/uploads
     networks:
       - despensa-net
+      - public-net
 
   despensa-worker:
     build: ./api
@@ -83,14 +79,11 @@ services:
       - despensa-api
     networks:
       - despensa-net
-      - proxy-net
+      - public-net
 
 networks:
   despensa-net:
-  proxy-net:
+    driver: bridge
+  public-net:
     external: true
-    name: ${NPM_NETWORK_NAME:-npm-net}
-
-volumes:
-  despensa-pgdata:
-  despensa-uploads:
+    name: ${rede:-web_network}
