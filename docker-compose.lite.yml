@@ -1,0 +1,45 @@
+version: "3.8"
+
+# Todas as variáveis abaixo (${...}) devem ser definidas no Portainer,
+# em Stacks > (o teu stack) > Environment variables. Não é preciso
+# nenhum ficheiro .env no host quando o stack é lançado pelo Portainer.
+# Ver README.md para a lista completa e valores sugeridos.
+
+services:
+  despensa-api:
+    build: ./api
+    container_name: despensa-api
+    restart: unless-stopped
+    environment:
+      DEPLOY_EDITION: ${DEPLOY_EDITION:-lite}
+      DB_DRIVER: ${DB_DRIVER:-sqlite}
+      JWT_SECRET: ${JWT_SECRET:?define JWT_SECRET nas variaveis do stack}
+      NODE_ENV: production
+      PORT: 3000
+    volumes:
+      - despensa-data:/app/data       # base de dados SQLite
+      - despensa-uploads:/app/uploads # fotos de produtos (fallback sem código de barras)
+    networks:
+      - despensa-net
+
+  despensa-app:
+    build: ./app
+    container_name: despensa-app
+    restart: unless-stopped
+    depends_on:
+      - despensa-api
+    networks:
+      - despensa-net
+      - proxy-net
+
+networks:
+  despensa-net:
+  proxy-net:
+    external: true
+    # Aponta para a rede real do teu Nginx Proxy Manager (ou outro proxy).
+    # Define NPM_NETWORK_NAME nas variáveis do stack — ex: npm-net, npm_default, etc.
+    name: ${NPM_NETWORK_NAME:-npm-net}
+
+volumes:
+  despensa-data:
+  despensa-uploads:

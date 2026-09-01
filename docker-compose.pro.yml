@@ -1,0 +1,96 @@
+version: "3.8"
+
+# Edição PRO — pensada para a OCI Ampere, onde há mais recursos disponíveis.
+# Mesmo código de ./api e ./app da edição Lite — só muda a infraestrutura.
+# Todas as variáveis (${...}) definem-se no Portainer, em
+# Stacks > (o teu stack) > Environment variables. Ver README.md.
+
+services:
+  despensa-db:
+    image: postgres:16-alpine
+    container_name: despensa-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-despensa}
+      POSTGRES_USER: ${POSTGRES_USER:-despensa}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD nas variaveis do stack}
+    volumes:
+      - despensa-pgdata:/var/lib/postgresql/data
+    networks:
+      - despensa-net
+
+  despensa-redis:
+    image: redis:7-alpine
+    container_name: despensa-redis
+    restart: unless-stopped
+    networks:
+      - despensa-net
+
+  despensa-api:
+    build: ./api
+    container_name: despensa-api
+    restart: unless-stopped
+    environment:
+      DEPLOY_EDITION: pro
+      DB_DRIVER: postgres
+      PGHOST: despensa-db
+      PGPORT: 5432
+      PGUSER: ${POSTGRES_USER:-despensa}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD nas variaveis do stack}
+      PGDATABASE: ${POSTGRES_DB:-despensa}
+      REDIS_URL: redis://despensa-redis:6379
+      JWT_SECRET: ${JWT_SECRET:?define JWT_SECRET nas variaveis do stack}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@example.com}
+      NODE_ENV: production
+      PORT: 3000
+    depends_on:
+      - despensa-db
+      - despensa-redis
+    volumes:
+      - despensa-uploads:/app/uploads
+    networks:
+      - despensa-net
+
+  despensa-worker:
+    build: ./api
+    container_name: despensa-worker
+    restart: unless-stopped
+    command: ["node", "src/worker.js"]
+    environment:
+      DB_DRIVER: postgres
+      PGHOST: despensa-db
+      PGPORT: 5432
+      PGUSER: ${POSTGRES_USER:-despensa}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD nas variaveis do stack}
+      PGDATABASE: ${POSTGRES_DB:-despensa}
+      REDIS_URL: redis://despensa-redis:6379
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@example.com}
+    depends_on:
+      - despensa-db
+      - despensa-redis
+    networks:
+      - despensa-net
+
+  despensa-app:
+    build: ./app
+    container_name: despensa-app
+    restart: unless-stopped
+    depends_on:
+      - despensa-api
+    networks:
+      - despensa-net
+      - proxy-net
+
+networks:
+  despensa-net:
+  proxy-net:
+    external: true
+    name: ${NPM_NETWORK_NAME:-npm-net}
+
+volumes:
+  despensa-pgdata:
+  despensa-uploads:
