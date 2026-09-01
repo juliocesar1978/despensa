@@ -1,9 +1,11 @@
 import { useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { BrowserMultiFormatReader } from '@zxing/browser';
 import { apiGet, apiPost } from '../api.js';
 
 export default function AddProduct() {
   const videoRef = useRef(null);
+  const navigate = useNavigate();
   const [ean, setEan] = useState('');
   const [sugestao, setSugestao] = useState(null);
   const [form, setForm] = useState({ nome: '', quantidade: 1, validade: '', localizacao: '', unidade: 'un', stock_minimo: 1 });
@@ -30,38 +32,46 @@ export default function AddProduct() {
   }
 
   async function consultarEan(codigo) {
-    const r = await apiGet(`/products/lookup/${codigo}`);
-    if (r.existe) {
-      setForm((f) => ({ ...f, nome: r.product.nome, unidade: r.product.unidade, stock_minimo: r.product.stock_minimo }));
-      setSugestao({ productId: r.product.id });
-    } else if (r.encontrado) {
-      setForm((f) => ({ ...f, nome: r.sugestao.nome }));
-      setSugestao({ novo: true, imagem_url: r.sugestao.imagem_url });
-    } else {
-      setMsg('Código não encontrado na Open Food Facts — preenche o nome manualmente.');
+    try {
+      const r = await apiGet(`/products/lookup/${codigo}`);
+      if (r.existe) {
+        setForm((f) => ({ ...f, nome: r.product.nome, unidade: r.product.unidade, stock_minimo: r.product.stock_minimo }));
+        setSugestao({ productId: r.product.id });
+      } else if (r.encontrado) {
+        setForm((f) => ({ ...f, nome: r.sugestao.nome }));
+        setSugestao({ novo: true, imagem_url: r.sugestao.imagem_url });
+      } else {
+        setMsg('Código não encontrado na Open Food Facts — preenche o nome manualmente.');
+      }
+    } catch {
+      setMsg('Não foi possível consultar o produto indicado.');
     }
   }
 
   async function guardar(e) {
     e.preventDefault();
-    let productId = sugestao?.productId;
-    if (!productId) {
-      const novo = await apiPost('/products', {
-        nome: form.nome,
-        ean: ean || null,
-        unidade: form.unidade,
-        stock_minimo: form.stock_minimo,
-        imagem_url: sugestao?.imagem_url || null
+    try {
+      let productId = sugestao?.productId;
+      if (!productId) {
+        const novo = await apiPost('/products', {
+          nome: form.nome,
+          ean: ean || null,
+          unidade: form.unidade,
+          stock_minimo: form.stock_minimo,
+          imagem_url: sugestao?.imagem_url || null
+        });
+        productId = novo.id;
+      }
+      await apiPost('/stock/entrada', {
+        product_id: productId,
+        quantidade: Number(form.quantidade),
+        validade: form.validade || null,
+        localizacao: form.localizacao
       });
-      productId = novo.id;
+      navigate('/');
+    } catch (error) {
+      setMsg(error.message || 'Não foi possível guardar o produto.');
     }
-    await apiPost('/stock/entrada', {
-      product_id: productId,
-      quantidade: Number(form.quantidade),
-      validade: form.validade || null,
-      localizacao: form.localizacao
-    });
-    window.location.href = '/';
   }
 
   return (

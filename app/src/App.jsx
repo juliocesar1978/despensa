@@ -11,13 +11,30 @@ export default function App() {
   const [needsSetup, setNeedsSetup] = useState(null);
 
   useEffect(() => {
-    apiGet('/setup/status').then((r) => setNeedsSetup(r.needsSetup)).catch(() => setNeedsSetup(false));
+    let cancelled = false;
+
+    apiGet('/setup/status')
+      .then((r) => {
+        if (!cancelled) setNeedsSetup(Boolean(r.needsSetup));
+      })
+      .catch(() => {
+        if (!cancelled) setNeedsSetup(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   if (needsSetup === null) return <p style={{ padding: 24, fontFamily: 'sans-serif' }}>A carregar…</p>;
   if (needsSetup) return <Setup />;
 
-  const isLogged = !!localStorage.getItem('token');
+  let isLogged = false;
+  try {
+    isLogged = !!localStorage.getItem('token');
+  } catch {
+    isLogged = false;
+  }
 
   return (
     <Routes>

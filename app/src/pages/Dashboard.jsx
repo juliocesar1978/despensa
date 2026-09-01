@@ -7,16 +7,31 @@ export default function Dashboard() {
   const [stock, setStock] = useState([]);
   const [expira, setExpira] = useState([]);
 
-  function carregar() {
-    apiGet('/stock').then(setStock);
-    apiGet('/stock/a-expirar?dias=5').then(setExpira);
+  async function carregar() {
+    try {
+      const [stockData, expiraData] = await Promise.all([
+        apiGet('/stock'),
+        apiGet('/stock/a-expirar?dias=5')
+      ]);
+      setStock(stockData || []);
+      setExpira(expiraData || []);
+    } catch {
+      setStock([]);
+      setExpira([]);
+    }
   }
 
-  useEffect(carregar, []);
+  useEffect(() => {
+    carregar();
+  }, []);
 
   async function consumir(id) {
-    await apiPost('/stock/consumo', { product_id: id, quantidade: 1 });
-    carregar();
+    try {
+      await apiPost('/stock/consumo', { product_id: id, quantidade: 1 });
+      await carregar();
+    } catch {
+      alert('Não foi possível atualizar o stock.');
+    }
   }
 
   async function ativar() {
