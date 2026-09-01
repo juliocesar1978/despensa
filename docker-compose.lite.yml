@@ -17,8 +17,8 @@ services:
       NODE_ENV: production
       PORT: 3000
     volumes:
-      - despensa-data:/app/data       # base de dados SQLite
-      - despensa-uploads:/app/uploads # fotos de produtos (fallback sem código de barras)
+      - ${local}/data:/app/data       # base de dados SQLite
+      - ${local}/uploads:/app/uploads # fotos de produtos (fallback sem código de barras)
     networks:
       - despensa-net
 
