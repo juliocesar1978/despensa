@@ -15,7 +15,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-despensa}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD nas variaveis do stack}
     volumes:
-      - despensa-pgdata:/var/lib/postgresql/data
+      - ${local}/data:/var/lib/postgresql/data
     networks:
       - despensa-net
 
@@ -49,7 +49,7 @@ services:
       - despensa-db
       - despensa-redis
     volumes:
-      - despensa-uploads:/app/uploads
+      - ${local}/app/uploads:/app/uploads
     networks:
       - despensa-net
 
