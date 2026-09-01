@@ -7,7 +7,7 @@ const config = {
     client: 'better-sqlite3',
     useNullAsDefault: true,
     connection: { filename: process.env.SQLITE_PATH || '/app/data/despensa.sqlite' },
-    migrations: { directory: './src/migrations' }
+    migrations: { directory: './migrations' }
   },
   postgres: {
     client: 'pg',
