@@ -12,8 +12,8 @@ services:
       NODE_ENV: production
       PORT: 3000
     volumes:
-      - despensa-data:/app/data
-      - despensa-uploads:/app/uploads
+      - ${local}/data:/app/data
+      - ${local}/uploads:/app/uploads
     networks:
       - public-net
 
@@ -30,7 +30,3 @@ networks:
   public-net:
     external: true
     name: ${rede:-web_network}
-
-volumes:
-  despensa-data:
-  despensa-uploads:
